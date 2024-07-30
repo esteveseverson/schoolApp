@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"sistema-web/database"
-	"sistema-web/models"
+	"schoolApp/database"
+	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )

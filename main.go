@@ -1,8 +1,8 @@
 package main
 
 import (
-	"sistema-web/database"
-	"sistema-web/routes"
+	"schoolApp/database"
+	"schoolApp/routes"
 
 	"github.com/gin-gonic/gin"
 )
