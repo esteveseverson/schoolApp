@@ -1,42 +1,42 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
+type Counter struct {
+	ID  string `json:"id" bson:"_id"`
+	Seq int    `json:"seq" bson:"seq"`
+}
 
 type Professor struct {
-	gorm.Model
-	Nome  string
-	Email string
-	CPF   string
+	ID    int    `json:"id" bson:"id"`
+	Nome  string `json:"nome" bson:"nome"`
+	Email string `json:"email" bson:"email"`
+	CPF   string `json:"cpf" bson:"cpf"`
 }
 
 type Turma struct {
-	gorm.Model
-	Nome        string
-	Semestre    int
-	Ano         int
-	ProfessorID uint
-	Professor   Professor
+	ID          int    `json:"id" bson:"id"`
+	Nome        string `json:"nome" bson:"nome"`
+	Semestre    int    `json:"semestre" bson:"semestre"`
+	Ano         int    `json:"ano" bson:"ano"`
+	ProfessorID int    `json:"professor_id" bson:"professor_id"`
 }
 
 type Aluno struct {
-	gorm.Model
-	Nome      string
-	Matricula string
-	Turmas    []Turma `gorm:"many2many:aluno_turmas"`
+	ID        int    `json:"id" bson:"id"`
+	Nome      string `json:"nome" bson:"nome"`
+	Matricula string `json:"matricula" bson:"matricula"`
+	Turmas    []int  `json:"turmas" bson:"turmas"`
 }
 
 type Atividade struct {
-	gorm.Model
-	TurmaID uint
-	Valor   int
-	Data    string
+	ID      int     `json:"id" bson:"id"`
+	TurmaID int     `json:"turma_id" bson:"turma_id"`
+	Valor   float64 `json:"valor" bson:"valor"`
+	Data    string  `json:"data" bson:"data"`
 }
 
 type Nota struct {
-	gorm.Model
-	AlunoID     uint
-	AtividadeID uint
-	Nota        int
+	ID          int     `json:"id" bson:"id"`
+	AlunoID     int     `json:"aluno_id" bson:"aluno_id"`
+	AtividadeID int     `json:"atividade_id" bson:"atividade_id"`
+	Nota        float64 `json:"nota" bson:"nota"`
 }
