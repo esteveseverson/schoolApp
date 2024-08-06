@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,43 +11,35 @@ import (
 
 var DB *mongo.Database
 
-type Counter struct {
-	ID  string `bson:"_id"`
-	Seq int    `bson:"seq"`
-}
-
-func Connect() {
+func ConnectDB() error {
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.NewClient(clientOptions)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, clientOptions)
+	err = client.Connect(ctx)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	DB = client.Database("schoolApp")
-	log.Println("Connected to MongoDB!")
+	return nil
 }
 
-func GetNextSequence(collection *mongo.Collection, sequenceName string) (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var counter Counter
-	filter := bson.M{"_id": sequenceName}
+func GetNextSequence(collection *mongo.Collection, name string) (int, error) {
+	var result struct {
+		Seq int `bson:"seq"`
+	}
+	filter := bson.M{"_id": name}
 	update := bson.M{"$inc": bson.M{"seq": 1}}
-	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
-
-	err := collection.FindOneAndUpdate(ctx, filter, update, options).Decode(&counter)
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
+	err := collection.FindOneAndUpdate(context.Background(), filter, update, opts).Decode(&result)
 	if err != nil {
 		return 0, err
 	}
-
-	return counter.Seq, nil
+	return result.Seq, nil
 }

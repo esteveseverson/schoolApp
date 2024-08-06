@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"schoolApp/database"
 	"schoolApp/routes"
 
@@ -9,7 +10,15 @@ import (
 
 func main() {
 	router := gin.Default()
-	database.Connect()
 	routes.SetupRoutes(router)
-	router.Run(":8080")
+
+	err := database.ConnectDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = router.Run(":8080")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
