@@ -1,13 +1,13 @@
 package routes
 
 import (
-	"context"
+	"database/sql"
 	"net/http"
 	"schoolApp/database"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
+	_ "github.com/lib/pq" // Importa o driver do PostgreSQL
 )
 
 func SetupRoutes(r *gin.Engine) {
@@ -19,24 +19,37 @@ func SetupRoutes(r *gin.Engine) {
 			return
 		}
 
-		collection := database.DB.Collection("professores")
-		counterCollection := database.DB.Collection("counters")
-
-		id, err := database.GetNextSequence(counterCollection, "professores")
+		query := `INSERT INTO professores (nome, email, cpf) VALUES ($1, $2, $3) RETURNING id`
+		var id int
+		err := database.DB.QueryRow(query, professor.Nome, professor.Email, professor.CPF).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		professor.ID = id
+		c.JSON(http.StatusOK, professor)
+	})
 
-		result, err := collection.InsertOne(context.Background(), professor)
+	r.GET("/professores", func(c *gin.Context) {
+		rows, err := database.DB.Query("SELECT id, nome, email, cpf FROM professores")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		defer rows.Close()
 
-		c.JSON(http.StatusOK, result)
+		var professores []models.Professor
+		for rows.Next() {
+			var professor models.Professor
+			if err := rows.Scan(&professor.ID, &professor.Nome, &professor.Email, &professor.CPF); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			professores = append(professores, professor)
+		}
+
+		c.JSON(http.StatusOK, professores)
 	})
 
 	// Turmas
@@ -47,26 +60,52 @@ func SetupRoutes(r *gin.Engine) {
 			return
 		}
 
-		collection := database.DB.Collection("turmas")
-		counterCollection := database.DB.Collection("counters")
+		// Verificar se o professor existe
+		var professorID int
+		err := database.DB.QueryRow("SELECT id FROM professores WHERE id = $1", turma.ProfessorID).Scan(&professorID)
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Professor inválido"})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar professor"})
+			return
+		}
 
-		id, err := database.GetNextSequence(counterCollection, "turmas")
+		// Inserir a turma no banco de dados
+		query := `INSERT INTO turmas (nome, ano, professor_id) VALUES ($1, $2, $3) RETURNING id`
+		var id int
+		err = database.DB.QueryRow(query, turma.Nome, turma.Ano, turma.ProfessorID).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		turma.ID = id
+		c.JSON(http.StatusOK, turma)
+	})
 
-		result, err := collection.InsertOne(context.Background(), turma)
+	r.GET("/turmas", func(c *gin.Context) {
+		rows, err := database.DB.Query("SELECT id, nome, ano, professor_id FROM turmas")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		defer rows.Close()
 
-		c.JSON(http.StatusOK, result)
+		var turmas []models.Turma
+		for rows.Next() {
+			var turma models.Turma
+			if err := rows.Scan(&turma.ID, &turma.Nome, &turma.Ano, &turma.ProfessorID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			turmas = append(turmas, turma)
+		}
+
+		c.JSON(http.StatusOK, turmas)
 	})
 
+	// Alunos
 	// Alunos
 	r.POST("/alunos", func(c *gin.Context) {
 		var aluno models.Aluno
@@ -75,24 +114,49 @@ func SetupRoutes(r *gin.Engine) {
 			return
 		}
 
-		collection := database.DB.Collection("alunos")
-		counterCollection := database.DB.Collection("counters")
+		// Verificar se a turma existe
+		var turmaID int
+		err := database.DB.QueryRow("SELECT id FROM turmas WHERE id = $1", aluno.TurmaID).Scan(&turmaID)
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Turma inválida"})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar turma"})
+			return
+		}
 
-		id, err := database.GetNextSequence(counterCollection, "alunos")
+		// Inserir aluno no banco de dados
+		query := `INSERT INTO alunos (nome, matricula, turma_id) VALUES ($1, $2, $3) RETURNING id`
+		var id int
+		err = database.DB.QueryRow(query, aluno.Nome, aluno.Matricula, aluno.TurmaID).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		aluno.ID = id
+		c.JSON(http.StatusOK, aluno)
+	})
 
-		result, err := collection.InsertOne(context.Background(), aluno)
+	r.GET("/alunos", func(c *gin.Context) {
+		rows, err := database.DB.Query("SELECT id, nome, matricula, turma_id FROM alunos")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		defer rows.Close()
 
-		c.JSON(http.StatusOK, result)
+		var alunos []models.Aluno
+		for rows.Next() {
+			var aluno models.Aluno
+			if err := rows.Scan(&aluno.ID, &aluno.Nome, &aluno.Matricula, &aluno.TurmaID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			alunos = append(alunos, aluno)
+		}
+
+		c.JSON(http.StatusOK, alunos)
 	})
 
 	// Atividades
@@ -103,47 +167,52 @@ func SetupRoutes(r *gin.Engine) {
 			return
 		}
 
-		collection := database.DB.Collection("atividades")
-		counterCollection := database.DB.Collection("counters")
+		// Verificar se a soma dos valores das atividades da turma não ultrapassa 100 pontos
+		var total float64
+		query := `SELECT SUM(valor) FROM atividades WHERE turma_id = $1`
+		err := database.DB.QueryRow(query, atividade.TurmaID).Scan(&total)
+		if err != nil && err != sql.ErrNoRows {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-		id, err := database.GetNextSequence(counterCollection, "atividades")
+		total += atividade.Valor
+		if total > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor total das atividades da turma não pode ultrapassar 100 pontos"})
+			return
+		}
+
+		query = `INSERT INTO atividades (turma_id, valor, data) VALUES ($1, $2, $3) RETURNING id`
+		var id int
+		err = database.DB.QueryRow(query, atividade.TurmaID, atividade.Valor, atividade.Data).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		atividade.ID = id
+		c.JSON(http.StatusOK, atividade)
+	})
 
-		// Verificar se a soma dos valores das atividades da turma não ultrapassa 100 pontos
-		filter := bson.M{"turma_id": atividade.TurmaID}
+	r.GET("/atividades", func(c *gin.Context) {
+		rows, err := database.DB.Query("SELECT id, turma_id, valor, data FROM atividades")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer rows.Close()
+
 		var atividades []models.Atividade
-		cursor, err := collection.Find(context.Background(), filter)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		if err = cursor.All(context.Background(), &atividades); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		total := atividade.Valor
-		for _, a := range atividades {
-			total += a.Valor
+		for rows.Next() {
+			var atividade models.Atividade
+			if err := rows.Scan(&atividade.ID, &atividade.TurmaID, &atividade.Valor, &atividade.Data); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			atividades = append(atividades, atividade)
 		}
 
-		if total > 100 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor total das atividades da turma não pode ultrapassar 100 pontos"})
-			return
-		}
-
-		result, err := collection.InsertOne(context.Background(), atividade)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusOK, result)
+		c.JSON(http.StatusOK, atividades)
 	})
 
 	// Notas
@@ -154,39 +223,50 @@ func SetupRoutes(r *gin.Engine) {
 			return
 		}
 
-		atividadesCollection := database.DB.Collection("atividades")
-		ctx := context.Background()
-
 		// Verificar se a nota não ultrapassa o valor máximo permitido da atividade
-		var atividade models.Atividade
-		err := atividadesCollection.FindOne(ctx, bson.M{"id": nota.AtividadeID}).Decode(&atividade)
+		var valorAtividade float64
+		query := `SELECT valor FROM atividades WHERE id = $1`
+		err := database.DB.QueryRow(query, nota.AtividadeID).Scan(&valorAtividade)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Atividade não encontrada"})
 			return
 		}
 
-		if nota.Nota > atividade.Valor {
+		if nota.Valor > valorAtividade {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "A nota não pode ultrapassar o valor máximo da atividade"})
 			return
 		}
 
-		collection := database.DB.Collection("notas")
-		counterCollection := database.DB.Collection("counters")
-
-		id, err := database.GetNextSequence(counterCollection, "notas")
+		query = `INSERT INTO notas (aluno_id, atividade_id, nota) VALUES ($1, $2, $3) RETURNING id`
+		var id int
+		err = database.DB.QueryRow(query, nota.AlunoID, nota.AtividadeID, nota.Valor).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		nota.ID = id
+		c.JSON(http.StatusOK, nota)
+	})
 
-		result, err := collection.InsertOne(ctx, nota)
+	r.GET("/notas", func(c *gin.Context) {
+		rows, err := database.DB.Query("SELECT id, aluno_id, atividade_id, nota FROM notas")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		defer rows.Close()
 
-		c.JSON(http.StatusOK, result)
+		var notas []models.Nota
+		for rows.Next() {
+			var nota models.Nota
+			if err := rows.Scan(&nota.ID, &nota.AlunoID, &nota.AtividadeID, &nota.Valor); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			notas = append(notas, nota)
+		}
+
+		c.JSON(http.StatusOK, notas)
 	})
 }
