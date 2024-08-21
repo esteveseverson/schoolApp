@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"schoolApp/database"
 	"schoolApp/routes"
 
@@ -15,12 +14,7 @@ func main() {
 
 	// Configura o router Gin
 	router := gin.Default()
-
-	// Configura as rotas
+	database.Connect()
 	routes.SetupRoutes(router)
-
-	// Inicia o servidor na porta 8080
-	if err := router.Run(":8080"); err != nil {
-		log.Fatalf("Erro ao iniciar o servidor: %v", err)
-	}
+	router.Run(":8080")
 }

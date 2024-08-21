@@ -106,7 +106,6 @@ func SetupRoutes(r *gin.Engine) {
 	})
 
 	// Alunos
-	// Alunos
 	r.POST("/alunos", func(c *gin.Context) {
 		var aluno models.Aluno
 		if err := c.ShouldBindJSON(&aluno); err != nil {
