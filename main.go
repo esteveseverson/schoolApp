@@ -1,20 +1,24 @@
 package main
 
 import (
-	"schoolApp/database"
+	"schoolApp/config"
 	"schoolApp/routes"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 func main() {
-	// Inicializa a conexão com o banco de dados PostgreSQL
-	database.Connect()
+	r := gin.Default()
 
-	// Configura o router Gin
-	router := gin.Default()
-	database.Connect()
-	routes.SetupRoutes(router)
-	router.Run(":8080")
+	// Conectar ao banco de dados
+	config.ConnectDB()
+
+	// Registrar rotas
+	routes.ProfessorRoutes(r)
+	routes.TurmaRoutes(r)
+	routes.AlunoRoutes(r)
+	routes.AtividadeRoutes(r)
+
+	// Iniciar o servidor
+	r.Run(":8080")
 }
