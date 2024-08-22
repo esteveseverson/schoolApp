@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atividades</title>
+    <script src="script.js" defer></script>
+</head>
+<body id="activities">
+    <h1>Atividades</h1>
+    <form id="activityForm">
+        <label for="class_id">Turma:</label>
+        <input type="number" id="class_id" name="class_id" required>
+        <label for="value">Valor:</label>
+        <input type="number" id="value" name="value" required>
+        <label for="due_date">Data de Entrega:</label>
+        <input type="date" id="due_date" name="due_date" required>
+        <button type="submit">Adicionar Atividade</button>
+    </form>
+    <h2>Lista de Atividades</h2>
+    <table id="activityTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Turma</th>
+                <th>Valor</th>
+                <th>Data de Entrega</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</body>
+</html>

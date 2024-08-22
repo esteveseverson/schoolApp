@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turmas</title>
+    <script src="script.js" defer></script>
+</head>
+<body id="classes">
+    <h1>Turmas</h1>
+    <form id="classForm">
+        <label for="name">Nome da Turma:</label>
+        <input type="text" id="name" name="name" required>
+        <label for="semester">Semestre:</label>
+        <input type="number" id="semester" name="semester" required>
+        <label for="year">Ano:</label>
+        <input type="number" id="year" name="year" required>
+        <label for="professor_id">Professor:</label>
+        <input type="number" id="professor_id" name="professor_id" required>
+        <button type="submit">Adicionar Turma</button>
+    </form>
+    <h2>Lista de Turmas</h2>
+    <table id="classTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome da Turma</th>
+                <th>Semestre</th>
+                <th>Ano</th>
+                <th>Professor</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</body>
+</html>
