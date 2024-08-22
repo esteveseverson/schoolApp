@@ -47,7 +47,7 @@ func ConnectDB() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=require",
 		cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.DBName)
 
 	DB, err = sql.Open("postgres", connStr)

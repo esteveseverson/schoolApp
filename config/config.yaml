@@ -1,6 +1,6 @@
 db:
-  host: "localhost"
-  port: 5432
-  user: "postgres"
-  password: "123123"
-  dbname: "school_app"
+  host: "aws-0-sa-east-1.pooler.supabase.com"
+  port: 6543
+  user: "postgres.verbgujjxgfcqekjziwe"
+  password: "topicos_especiais"
+  dbname: "postgres"
