@@ -15,7 +15,7 @@ func AlunoRoutes(r *gin.Engine) {
 		rows, err := config.DB.Query(`
 			SELECT a.id, a.nome, a.matricula, at.turma_id
 			FROM alunos a
-			LEFT JOIN aluno_turmas at ON a.id = at.aluno_id
+			LEFT JOIN alunos_turmas at ON a.id = at.aluno_id
 		`)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -91,7 +91,7 @@ func AlunoRoutes(r *gin.Engine) {
 
 		// Associar o aluno às turmas
 		for _, turmaID := range aluno.TurmaIDs {
-			_, err = config.DB.Exec("INSERT INTO aluno_turmas (aluno_id, turma_id) VALUES ($1, $2)", id, turmaID)
+			_, err = config.DB.Exec("INSERT INTO alunos_turmas (aluno_id, turma_id) VALUES ($1, $2)", id, turmaID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
@@ -111,22 +111,41 @@ func AlunoRoutes(r *gin.Engine) {
 			return
 		}
 
-		// Verificar se a turma existe
-		var turmaID int
-		err := config.DB.QueryRow("SELECT id FROM turmas WHERE id = $1", aluno.TurmaIDs).Scan(&turmaID)
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Turma inválida"})
-			return
-		} else if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar turma"})
-			return
+		// Verificar se cada turma existe
+		for _, turmaID := range aluno.TurmaIDs {
+			var tid int
+			err := config.DB.QueryRow("SELECT id FROM turmas WHERE id = $1", turmaID).Scan(&tid)
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Turma inválida"})
+				return
+			} else if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar turma"})
+				return
+			}
 		}
 
-		query := `UPDATE alunos SET nome = $1, matricula = $2, turma_id = $3 WHERE id = $4`
-		_, err = config.DB.Exec(query, aluno.Nome, aluno.Matricula, aluno.TurmaIDs, id)
+		// Atualizar o aluno
+		query := `UPDATE alunos SET nome = $1, matricula = $2 WHERE id = $3`
+		_, err := config.DB.Exec(query, aluno.Nome, aluno.Matricula, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		}
+
+		// Limpar as turmas existentes do aluno na tabela aluno_turmas
+		_, err = config.DB.Exec("DELETE FROM alunos_turmas WHERE aluno_id = $1", id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao limpar turmas do aluno"})
+			return
+		}
+
+		// Associar o aluno às novas turmas
+		for _, turmaID := range aluno.TurmaIDs {
+			_, err = config.DB.Exec("INSERT INTO alunos_turmas (aluno_id, turma_id) VALUES ($1, $2)", id, turmaID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao associar aluno às turmas"})
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "Aluno atualizado com sucesso"})
