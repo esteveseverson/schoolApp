@@ -18,6 +18,7 @@ func main() {
 	routes.TurmaRoutes(r)
 	routes.AlunoRoutes(r)
 	routes.AtividadeRoutes(r)
+	routes.NotaRoutes(r)
 
 	// Iniciar o servidor
 	r.Run(":8080")
