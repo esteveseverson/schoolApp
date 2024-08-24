@@ -21,5 +21,5 @@ func main() {
 	routes.NotaRoutes(r)
 
 	// Iniciar o servidor
-	r.Run(":8080")
+	r.Run(":8088")
 }
