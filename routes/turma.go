@@ -3,12 +3,15 @@ package routes
 import (
 	"net/http"
 	"schoolApp/config"
+	"schoolApp/middleware" // Importe o pacote de middleware
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func TurmaRoutes(r *gin.Engine) {
+	r.Use(middleware.CORSMiddleware())
+
 	r.GET("/turmas", func(c *gin.Context) {
 		rows, err := config.DB.Query("SELECT id, nome, ano, professor_id, semestre FROM turmas")
 		if err != nil {

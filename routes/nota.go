@@ -4,12 +4,15 @@ import (
 	"database/sql"
 	"net/http"
 	"schoolApp/config"
+	"schoolApp/middleware"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func NotaRoutes(r *gin.Engine) {
+	r.Use(middleware.CORSMiddleware())
+
 	r.GET("/notas", func(c *gin.Context) {
 		rows, err := config.DB.Query(`
 			SELECT 

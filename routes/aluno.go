@@ -4,12 +4,15 @@ import (
 	"database/sql"
 	"net/http"
 	"schoolApp/config"
+	"schoolApp/middleware"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func AlunoRoutes(r *gin.Engine) {
+	r.Use(middleware.CORSMiddleware())
+
 	// Rota para listar todos os alunos
 	r.GET("/alunos", func(c *gin.Context) {
 		rows, err := config.DB.Query(`

@@ -4,12 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-
 	"os"
 
-	"gopkg.in/yaml.v2"
-
 	_ "github.com/lib/pq"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -22,32 +20,35 @@ type Config struct {
 	} `yaml:"db"`
 }
 
-// docker run --name postgres-schoolapp -e POSTGRES_DB=schoolApp -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=123123 -p 5432:5432 -d postgres
+// DB é a instância global de conexão com o banco de dados
 var DB *sql.DB
 
+// LoadConfig carrega as configurações do banco de dados a partir do arquivo config.yaml
 func LoadConfig() (*Config, error) {
 	f, err := os.Open("config/config.yaml")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening config file: %w", err)
 	}
 	defer f.Close()
 
 	var cfg Config
 	decoder := yaml.NewDecoder(f)
 	if err := decoder.Decode(&cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding config file: %w", err)
 	}
 
 	return &cfg, nil
 }
 
+// ConnectDB conecta ao banco de dados PostgreSQL utilizando as configurações carregadas
 func ConnectDB() {
 	cfg, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=require",
+	// Ajuste o sslmode conforme necessário. Use "disable" para conexões locais sem SSL.
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.DBName)
 
 	DB, err = sql.Open("postgres", connStr)

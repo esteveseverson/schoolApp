@@ -4,11 +4,21 @@ import (
 	"schoolApp/config"
 	"schoolApp/routes"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	// Inicializar o router
 	r := gin.Default()
+
+	// Configurar o middleware de CORS
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://127.0.0.1:5500"}, // URL do frontend
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
 	// Conectar ao banco de dados
 	config.ConnectDB()

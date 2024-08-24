@@ -3,12 +3,15 @@ package routes
 import (
 	"net/http"
 	"schoolApp/config"
+	"schoolApp/middleware"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func ProfessorRoutes(r *gin.Engine) {
+	r.Use(middleware.CORSMiddleware())
+
 	r.GET("/professores", func(c *gin.Context) {
 		rows, err := config.DB.Query("SELECT id, nome, email, cpf FROM professores")
 		if err != nil {

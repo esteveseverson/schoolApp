@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"schoolApp/config"
+	"schoolApp/middleware"
 	"schoolApp/models"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 )
 
 func AtividadeRoutes(r *gin.Engine) {
+	r.Use(middleware.CORSMiddleware())
+
 	r.GET("/atividades", func(c *gin.Context) {
 		rows, err := config.DB.Query("SELECT id, turma_id, valor, data_entrega FROM atividades")
 		if err != nil {
