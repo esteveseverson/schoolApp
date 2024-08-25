@@ -126,11 +126,51 @@ func AtividadeRoutes(r *gin.Engine) {
 			return
 		}
 
+		// Obter os detalhes atuais da atividade
+		var (
+			currentTurmaID int
+			currentValor   float64
+		)
+		err := config.DB.QueryRow("SELECT turma_id, valor FROM atividades WHERE id = $1", id).Scan(&currentTurmaID, &currentValor)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Atividade não encontrada"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Verificar se a turma existe
+		var turmaID int
+		err = config.DB.QueryRow("SELECT id FROM turmas WHERE id = $1", atividade.TurmaID).Scan(&turmaID)
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Turma inválida"})
+			return
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar turma"})
+			return
+		}
+
+		// Verificar a soma das atividades já cadastradas excluindo a atividade atual
+		var totalAtividades float64
+		err = config.DB.QueryRow("SELECT COALESCE(SUM(valor), 0) FROM atividades WHERE turma_id = $1 AND id != $2", atividade.TurmaID, id).Scan(&totalAtividades)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar a soma das atividades"})
+			return
+		}
+
+		if totalAtividades+atividade.Valor > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "A soma das atividades ultrapassa 100 pontos"})
+			return
+		}
+
 		// Convertendo a data para o formato adequado (YYYY-MM-DD)
 		dataEntregaFormatted := atividade.DataEntrega.Format("2006-01-02")
 
+		// Atualizar a atividade
 		query := `UPDATE atividades SET turma_id=$1, valor=$2, data_entrega=$3 WHERE id=$4`
-		_, err := config.DB.Exec(query, atividade.TurmaID, atividade.Valor, dataEntregaFormatted, id)
+		_, err = config.DB.Exec(query, atividade.TurmaID, atividade.Valor, dataEntregaFormatted, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
