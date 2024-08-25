@@ -14,7 +14,7 @@ func main() {
 
 	// Configurar o middleware de CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://127.0.0.1:5500"}, // URL do frontend
+		AllowOrigins:     []string{"http://167.234.254.164:8080"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
