@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"net/http"
 	"schoolApp/config"
-	"schoolApp/middleware"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func ProfessorRoutes(r *gin.Engine) {
-	r.Use(middleware.CORSMiddleware())
 
 	// Rota para listar todos os professores
 	r.GET("/professores", func(c *gin.Context) {

@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"net/http"
 	"schoolApp/config"
-	"schoolApp/middleware"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func NotaRoutes(r *gin.Engine) {
-	r.Use(middleware.CORSMiddleware())
 
 	// Rota para listar todas as notas
 	r.GET("/notas", func(c *gin.Context) {

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 	"schoolApp/config"
-	"schoolApp/middleware"
 	"schoolApp/models"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 )
 
 func AtividadeRoutes(r *gin.Engine) {
-	r.Use(middleware.CORSMiddleware())
 
 	// Rota para listar todas as atividades
 	r.GET("/atividades", func(c *gin.Context) {
