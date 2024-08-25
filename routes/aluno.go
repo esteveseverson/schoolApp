@@ -62,6 +62,45 @@ func AlunoRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, alunos)
 	})
 
+	// Rota para buscar um aluno pelo ID
+	r.GET("/alunos/:id", func(c *gin.Context) {
+		id := c.Param("id")
+
+		var aluno models.Aluno
+		var turmaID sql.NullInt32
+
+		query := `
+			SELECT a.id, a.nome, a.matricula, at.turma_id
+			FROM alunos a
+			LEFT JOIN alunos_turmas at ON a.id = at.aluno_id
+			WHERE a.id = $1
+		`
+		rows, err := config.DB.Query(query, id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			if err := rows.Scan(&aluno.ID, &aluno.Nome, &aluno.Matricula, &turmaID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			if turmaID.Valid {
+				aluno.TurmaIDs = append(aluno.TurmaIDs, int(turmaID.Int32))
+			}
+		}
+
+		if aluno.ID == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Aluno não encontrado"})
+			return
+		}
+
+		c.JSON(http.StatusOK, aluno)
+	})
+
 	// Rota para criar um novo aluno
 	r.POST("/alunos", func(c *gin.Context) {
 		var aluno models.Aluno

@@ -14,6 +14,7 @@ import (
 func AtividadeRoutes(r *gin.Engine) {
 	r.Use(middleware.CORSMiddleware())
 
+	// Rota para listar todas as atividades
 	r.GET("/atividades", func(c *gin.Context) {
 		rows, err := config.DB.Query("SELECT id, turma_id, valor, data_entrega FROM atividades")
 		if err != nil {
@@ -28,14 +29,13 @@ func AtividadeRoutes(r *gin.Engine) {
 				id          int
 				turmaID     int
 				valor       float64
-				dataEntrega time.Time // Temporário para fazer o scan
+				dataEntrega time.Time
 			)
 			if err := rows.Scan(&id, &turmaID, &valor, &dataEntrega); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 
-			// Convertendo time.Time para models.CustomDate
 			atividade := models.Atividade{
 				ID:          id,
 				TurmaID:     turmaID,
@@ -47,6 +47,29 @@ func AtividadeRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, atividades)
 	})
 
+	// Rota para buscar uma atividade pelo ID
+	r.GET("/atividades/:id", func(c *gin.Context) {
+		id := c.Param("id")
+
+		var atividade models.Atividade
+		var dataEntrega time.Time
+
+		query := "SELECT id, turma_id, valor, data_entrega FROM atividades WHERE id = $1"
+		err := config.DB.QueryRow(query, id).Scan(&atividade.ID, &atividade.TurmaID, &atividade.Valor, &dataEntrega)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Atividade não encontrada"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		atividade.DataEntrega = models.CustomDate{Time: dataEntrega}
+		c.JSON(http.StatusOK, atividade)
+	})
+
+	// Rota para criar uma nova atividade
 	r.POST("/atividades", func(c *gin.Context) {
 		var atividade models.Atividade
 		if err := c.ShouldBindJSON(&atividade); err != nil {
@@ -94,6 +117,7 @@ func AtividadeRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, atividade)
 	})
 
+	// Rota para atualizar uma atividade existente
 	r.PUT("/atividades/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var atividade models.Atividade
@@ -115,6 +139,7 @@ func AtividadeRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{"message": "Atividade atualizada com sucesso"})
 	})
 
+	// Rota para deletar uma atividade existente
 	r.DELETE("/atividades/:id", func(c *gin.Context) {
 		id := c.Param("id")
 

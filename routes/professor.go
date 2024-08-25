@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"database/sql"
 	"net/http"
 	"schoolApp/config"
 	"schoolApp/middleware"
@@ -12,6 +13,7 @@ import (
 func ProfessorRoutes(r *gin.Engine) {
 	r.Use(middleware.CORSMiddleware())
 
+	// Rota para listar todos os professores
 	r.GET("/professores", func(c *gin.Context) {
 		rows, err := config.DB.Query("SELECT id, nome, email, cpf FROM professores")
 		if err != nil {
@@ -32,6 +34,27 @@ func ProfessorRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, professores)
 	})
 
+	// Rota para buscar um professor pelo ID
+	r.GET("/professores/:id", func(c *gin.Context) {
+		id := c.Param("id")
+
+		var professor models.Professor
+
+		query := `SELECT id, nome, email, cpf FROM professores WHERE id = $1`
+		err := config.DB.QueryRow(query, id).Scan(&professor.ID, &professor.Nome, &professor.Email, &professor.CPF)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Professor não encontrado"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, professor)
+	})
+
+	// Rota para criar um novo professor
 	r.POST("/professores", func(c *gin.Context) {
 		var professor models.Professor
 		if err := c.ShouldBindJSON(&professor); err != nil {
@@ -51,6 +74,7 @@ func ProfessorRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, professor)
 	})
 
+	// Rota para atualizar um professor existente
 	r.PUT("/professores/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var professor models.Professor
@@ -69,6 +93,7 @@ func ProfessorRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{"message": "Professor atualizado com sucesso"})
 	})
 
+	// Rota para deletar um professor existente
 	r.DELETE("/professores/:id", func(c *gin.Context) {
 		id := c.Param("id")
 

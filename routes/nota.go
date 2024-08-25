@@ -13,6 +13,7 @@ import (
 func NotaRoutes(r *gin.Engine) {
 	r.Use(middleware.CORSMiddleware())
 
+	// Rota para listar todas as notas
 	r.GET("/notas", func(c *gin.Context) {
 		rows, err := config.DB.Query(`
 			SELECT 
@@ -44,6 +45,43 @@ func NotaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, notas)
 	})
 
+	// Rota para buscar uma nota pelo ID
+	r.GET("/notas/:id", func(c *gin.Context) {
+		id := c.Param("id")
+
+		var nota models.Nota
+		var valorTotal float64
+		var turmaID int
+
+		query := `
+			SELECT 
+				n.id, 
+				n.aluno_id, 
+				n.professor_id, 
+				a.turma_id, 
+				n.atividade_id, 
+				a.valor AS valor_total, 
+				n.valor_obtido 
+			FROM notas n 
+			JOIN atividades a ON n.atividade_id = a.id
+			WHERE n.id = $1
+		`
+		err := config.DB.QueryRow(query, id).Scan(&nota.ID, &nota.AlunoID, &nota.ProfessorID, &turmaID, &nota.AtividadeID, &valorTotal, &nota.ValorObtido)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Nota não encontrada"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		nota.TurmaID = turmaID
+		nota.ValorTotal = valorTotal
+		c.JSON(http.StatusOK, nota)
+	})
+
+	// Rota para criar uma nova nota
 	r.POST("/notas", func(c *gin.Context) {
 		var nota models.Nota
 		if err := c.ShouldBindJSON(&nota); err != nil {
@@ -89,6 +127,7 @@ func NotaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, nota)
 	})
 
+	// Rota para atualizar uma nota existente
 	r.PUT("/notas/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var nota models.Nota
@@ -125,6 +164,7 @@ func NotaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{"message": "Nota atualizada com sucesso"})
 	})
 
+	// Rota para deletar uma nota existente
 	r.DELETE("/notas/:id", func(c *gin.Context) {
 		id := c.Param("id")
 

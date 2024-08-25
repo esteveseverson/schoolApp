@@ -1,9 +1,10 @@
 package routes
 
 import (
+	"database/sql"
 	"net/http"
 	"schoolApp/config"
-	"schoolApp/middleware" // Importe o pacote de middleware
+	"schoolApp/middleware"
 	"schoolApp/models"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 func TurmaRoutes(r *gin.Engine) {
 	r.Use(middleware.CORSMiddleware())
 
+	// Rota para listar todas as turmas
 	r.GET("/turmas", func(c *gin.Context) {
 		rows, err := config.DB.Query("SELECT id, nome, ano, professor_id, semestre FROM turmas")
 		if err != nil {
@@ -32,6 +34,27 @@ func TurmaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, turmas)
 	})
 
+	// Rota para buscar uma turma pelo ID
+	r.GET("/turmas/:id", func(c *gin.Context) {
+		id := c.Param("id")
+
+		var turma models.Turma
+
+		query := `SELECT id, nome, ano, professor_id, semestre FROM turmas WHERE id = $1`
+		err := config.DB.QueryRow(query, id).Scan(&turma.ID, &turma.Nome, &turma.Ano, &turma.ProfessorID, &turma.Semestre)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Turma não encontrada"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, turma)
+	})
+
+	// Rota para criar uma nova turma
 	r.POST("/turmas", func(c *gin.Context) {
 		var turma models.Turma
 		if err := c.ShouldBindJSON(&turma); err != nil {
@@ -59,6 +82,7 @@ func TurmaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, turma)
 	})
 
+	// Rota para atualizar uma turma existente
 	r.PUT("/turmas/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var turma models.Turma
@@ -77,6 +101,7 @@ func TurmaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{"message": "Turma atualizada com sucesso"})
 	})
 
+	// Rota para deletar uma turma existente
 	r.DELETE("/turmas/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
