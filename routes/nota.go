@@ -79,7 +79,6 @@ func NotaRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, nota)
 	})
 
-	// Rota para criar uma nova nota
 	r.POST("/notas", func(c *gin.Context) {
 		var nota models.Nota
 		if err := c.ShouldBindJSON(&nota); err != nil {
@@ -107,6 +106,12 @@ func NotaRoutes(r *gin.Engine) {
 			return
 		} else if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar atividade"})
+			return
+		}
+
+		// Verificar se o valor obtido não excede o valor total da atividade
+		if nota.ValorObtido > valorTotal {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor obtido não pode exceder o valor total da atividade"})
 			return
 		}
 
