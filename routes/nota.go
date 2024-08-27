@@ -110,7 +110,7 @@ func NotaRoutes(r *gin.Engine) {
 		}
 
 		// Verificar se o valor obtido não excede o valor total da atividade
-		if nota.ValorObtido > valorTotal {
+		if nota.ValorObtido > *&valorTotal {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor obtido não pode exceder o valor total da atividade"})
 			return
 		}
