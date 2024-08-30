@@ -95,8 +95,27 @@ func ProfessorRoutes(r *gin.Engine) {
 	r.DELETE("/professores/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
+		// Verificar se o professor está associado a alguma turma
+		var turmaNome string
+		queryCheck := `
+			SELECT t.nome 
+			FROM turmas t 
+			WHERE t.professor_id = $1
+		`
+		err := config.DB.QueryRow(queryCheck, id).Scan(&turmaNome)
+		if err == nil {
+			// Se encontrar uma turma associada, retorna erro
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Professor está cadastrado na Turma", "turma": turmaNome})
+			return
+		} else if err != sql.ErrNoRows {
+			// Caso ocorra um erro diferente de "sem linhas", retorna erro interno
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar turmas associadas ao professor"})
+			return
+		}
+
+		// Se o professor não estiver associado a nenhuma turma, procede com a exclusão
 		query := `DELETE FROM professores WHERE id=$1`
-		_, err := config.DB.Exec(query, id)
+		_, err = config.DB.Exec(query, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -195,8 +195,22 @@ func AlunoRoutes(r *gin.Engine) {
 	r.DELETE("/alunos/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
+		// Verificar se o aluno tem notas lançadas
+		var count int
+		err := config.DB.QueryRow("SELECT COUNT(*) FROM notas WHERE aluno_id = $1", id).Scan(&count)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar notas do aluno"})
+			return
+		}
+
+		if count > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Não é possível excluir o aluno. Existem notas lançadas para este aluno"})
+			return
+		}
+
+		// Excluir o aluno se não houver notas lançadas
 		query := `DELETE FROM alunos WHERE id = $1`
-		_, err := config.DB.Exec(query, id)
+		_, err = config.DB.Exec(query, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

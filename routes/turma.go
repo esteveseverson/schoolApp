@@ -103,8 +103,22 @@ func TurmaRoutes(r *gin.Engine) {
 	r.DELETE("/turmas/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
+		// Verificar se há atividades associadas à turma
+		var count int
+		err := config.DB.QueryRow("SELECT COUNT(*) FROM atividades WHERE turma_id = $1", id).Scan(&count)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar atividades associadas"})
+			return
+		}
+
+		if count > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Não é possível excluir a turma, pois há atividades associadas a ela"})
+			return
+		}
+
+		// Excluir a turma
 		query := `DELETE FROM turmas WHERE id=$1`
-		_, err := config.DB.Exec(query, id)
+		_, err = config.DB.Exec(query, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

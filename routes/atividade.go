@@ -14,7 +14,7 @@ func AtividadeRoutes(r *gin.Engine) {
 
 	// Rota para listar todas as atividades
 	r.GET("/atividades", func(c *gin.Context) {
-		rows, err := config.DB.Query("SELECT id, turma_id, valor, data_entrega FROM atividades")
+		rows, err := config.DB.Query("SELECT id, nome, turma_id, valor, data_entrega FROM atividades")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -25,17 +25,19 @@ func AtividadeRoutes(r *gin.Engine) {
 		for rows.Next() {
 			var (
 				id          int
+				nome        string
 				turmaID     int
 				valor       float64
 				dataEntrega time.Time
 			)
-			if err := rows.Scan(&id, &turmaID, &valor, &dataEntrega); err != nil {
+			if err := rows.Scan(&id, &nome, &turmaID, &valor, &dataEntrega); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
 
 			atividade := models.Atividade{
 				ID:          id,
+				Nome:        nome,
 				TurmaID:     turmaID,
 				Valor:       valor,
 				DataEntrega: models.CustomDate{Time: dataEntrega},
@@ -52,8 +54,8 @@ func AtividadeRoutes(r *gin.Engine) {
 		var atividade models.Atividade
 		var dataEntrega time.Time
 
-		query := "SELECT id, turma_id, valor, data_entrega FROM atividades WHERE id = $1"
-		err := config.DB.QueryRow(query, id).Scan(&atividade.ID, &atividade.TurmaID, &atividade.Valor, &dataEntrega)
+		query := "SELECT id, nome, turma_id, valor, data_entrega FROM atividades WHERE id = $1"
+		err := config.DB.QueryRow(query, id).Scan(&atividade.ID, &atividade.Nome, &atividade.TurmaID, &atividade.Valor, &dataEntrega)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Atividade não encontrada"})
@@ -103,9 +105,9 @@ func AtividadeRoutes(r *gin.Engine) {
 		dataEntregaFormatted := atividade.DataEntrega.Format("2006-01-02")
 
 		// Inserir a nova atividade
-		query := `INSERT INTO atividades (turma_id, valor, data_entrega) VALUES ($1, $2, $3) RETURNING id`
+		query := `INSERT INTO atividades (nome, turma_id, valor, data_entrega) VALUES ($1, $2, $3, $4) RETURNING id`
 		var id int
-		err = config.DB.QueryRow(query, atividade.TurmaID, atividade.Valor, dataEntregaFormatted).Scan(&id)
+		err = config.DB.QueryRow(query, atividade.Nome, atividade.TurmaID, atividade.Valor, dataEntregaFormatted).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -167,8 +169,8 @@ func AtividadeRoutes(r *gin.Engine) {
 		dataEntregaFormatted := atividade.DataEntrega.Format("2006-01-02")
 
 		// Atualizar a atividade
-		query := `UPDATE atividades SET turma_id=$1, valor=$2, data_entrega=$3 WHERE id=$4`
-		_, err = config.DB.Exec(query, atividade.TurmaID, atividade.Valor, dataEntregaFormatted, id)
+		query := `UPDATE atividades SET nome=$1, turma_id=$2, valor=$3, data_entrega=$4 WHERE id=$5`
+		_, err = config.DB.Exec(query, atividade.Nome, atividade.TurmaID, atividade.Valor, dataEntregaFormatted, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -181,13 +183,29 @@ func AtividadeRoutes(r *gin.Engine) {
 	r.DELETE("/atividades/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
+		// Verificar se a atividade está associada a alguma nota
+		var count int
+		checkQuery := `SELECT COUNT(*) FROM notas WHERE atividade_id = $1`
+		err := config.DB.QueryRow(checkQuery, id).Scan(&count)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar notas associadas"})
+			return
+		}
+
+		if count > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "A matéria possui notas lançadas e não pode ser deletada"})
+			return
+		}
+
+		// Deletar a atividade se não houver notas associadas
 		query := `DELETE FROM atividades WHERE id=$1`
-		_, err := config.DB.Exec(query, id)
+		_, err = config.DB.Exec(query, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Atividade excluída com sucesso"})
+		c.JSON(http.StatusOK, gin.H{"message": "Atividade deletada com sucesso"})
 	})
+
 }
