@@ -160,7 +160,8 @@ func AtividadeRoutes(r *gin.Engine) {
 			return
 		}
 
-		if totalAtividades+atividade.Valor > 100 {
+		// removendo o valor da atividade para a edição funcionar
+		if totalAtividades-currentValor+atividade.Valor > 100 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "A soma das atividades ultrapassa 100 pontos"})
 			return
 		}
