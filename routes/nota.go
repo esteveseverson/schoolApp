@@ -109,6 +109,18 @@ func NotaRoutes(r *gin.Engine) {
 			return
 		}
 
+		// Verificar se o aluno já possui uma nota para essa atividade
+		var notaExistenteID int
+		err = config.DB.QueryRow("SELECT id FROM notas WHERE aluno_id = $1 AND atividade_id = $2", nota.AlunoID, nota.AtividadeID).Scan(&notaExistenteID)
+		if err != nil && err != sql.ErrNoRows {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar nota existente"})
+			return
+		}
+		if notaExistenteID >= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "O aluno já possui uma nota para essa atividade"})
+			return
+		}
+
 		// Verificar se o valor obtido não excede o valor total da atividade
 		if nota.ValorObtido > *&valorTotal {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor obtido não pode exceder o valor total da atividade"})
