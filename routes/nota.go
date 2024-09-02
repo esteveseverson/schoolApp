@@ -116,7 +116,7 @@ func NotaRoutes(r *gin.Engine) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar nota existente"})
 			return
 		}
-		if notaExistenteID >= 0 {
+		if notaExistenteID > 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "O aluno já possui uma nota para essa atividade"})
 			return
 		}
