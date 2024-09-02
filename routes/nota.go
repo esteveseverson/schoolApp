@@ -17,7 +17,6 @@ func NotaRoutes(r *gin.Engine) {
 			SELECT 
 				n.id, 
 				n.aluno_id, 
-				n.professor_id, 
 				a.turma_id, 
 				n.atividade_id, 
 				a.valor AS valor_total, 
@@ -35,7 +34,7 @@ func NotaRoutes(r *gin.Engine) {
 		var notas []models.Nota
 		for rows.Next() {
 			var nota models.Nota
-			if err := rows.Scan(&nota.ID, &nota.AlunoID, &nota.ProfessorID, &nota.TurmaID, &nota.AtividadeID, &nota.ValorTotal, &nota.ValorObtido); err != nil {
+			if err := rows.Scan(&nota.ID, &nota.AlunoID, &nota.TurmaID, &nota.AtividadeID, &nota.ValorTotal, &nota.ValorObtido); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
@@ -56,7 +55,6 @@ func NotaRoutes(r *gin.Engine) {
 			SELECT 
 				n.id, 
 				n.aluno_id, 
-				n.professor_id, 
 				a.turma_id, 
 				n.atividade_id, 
 				a.valor AS valor_total, 
@@ -65,7 +63,7 @@ func NotaRoutes(r *gin.Engine) {
 			JOIN atividades a ON n.atividade_id = a.id
 			WHERE n.id = $1
 		`
-		err := config.DB.QueryRow(query, id).Scan(&nota.ID, &nota.AlunoID, &nota.ProfessorID, &turmaID, &nota.AtividadeID, &valorTotal, &nota.ValorObtido)
+		err := config.DB.QueryRow(query, id).Scan(&nota.ID, &nota.AlunoID, &turmaID, &nota.AtividadeID, &valorTotal, &nota.ValorObtido)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Nota não encontrada"})
@@ -91,19 +89,6 @@ func NotaRoutes(r *gin.Engine) {
 		tx, err := config.DB.Begin()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao iniciar transação"})
-			return
-		}
-
-		// Verificar se o professor existe
-		var professorID int
-		err = tx.QueryRow("SELECT id FROM professores WHERE id = $1", nota.ProfessorID).Scan(&professorID)
-		if err == sql.ErrNoRows {
-			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Professor inválido"})
-			return
-		} else if err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar professor"})
 			return
 		}
 
@@ -136,16 +121,16 @@ func NotaRoutes(r *gin.Engine) {
 		}
 
 		// Verificar se o valor obtido não excede o valor total da atividade
-		if nota.ValorObtido > *&valorTotal {
+		if nota.ValorObtido > valorTotal {
 			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor obtido não pode exceder o valor total da atividade"})
 			return
 		}
 
 		// Inserir nota no banco de dados
-		query := `INSERT INTO notas (aluno_id, atividade_id, professor_id, valor_obtido) VALUES ($1, $2, $3, $4) RETURNING id`
+		query := `INSERT INTO notas (aluno_id, atividade_id, valor_obtido) VALUES ($1, $2, $3) RETURNING id`
 		var id int
-		err = tx.QueryRow(query, nota.AlunoID, nota.AtividadeID, nota.ProfessorID, nota.ValorObtido).Scan(&id)
+		err = tx.QueryRow(query, nota.AlunoID, nota.AtividadeID, nota.ValorObtido).Scan(&id)
 		if err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao inserir nota: " + err.Error()})
@@ -192,8 +177,8 @@ func NotaRoutes(r *gin.Engine) {
 		}
 
 		// Atualizar nota no banco de dados
-		query := `UPDATE notas SET aluno_id = $1, atividade_id = $2, professor_id = $3, valor_obtido = $4 WHERE id = $5`
-		_, err = config.DB.Exec(query, nota.AlunoID, nota.AtividadeID, nota.ProfessorID, nota.ValorObtido, id)
+		query := `UPDATE notas SET aluno_id = $1, atividade_id = $2, valor_obtido = $3 WHERE id = $4`
+		_, err = config.DB.Exec(query, nota.AlunoID, nota.AtividadeID, nota.ValorObtido, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
