@@ -86,13 +86,22 @@ func NotaRoutes(r *gin.Engine) {
 			return
 		}
 
+		// Iniciar uma transação
+		tx, err := config.DB.Begin()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao iniciar transação"})
+			return
+		}
+
 		// Verificar se o professor existe
 		var professorID int
-		err := config.DB.QueryRow("SELECT id FROM professores WHERE id = $1", nota.ProfessorID).Scan(&professorID)
+		err = tx.QueryRow("SELECT id FROM professores WHERE id = $1", nota.ProfessorID).Scan(&professorID)
 		if err == sql.ErrNoRows {
+			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Professor inválido"})
 			return
 		} else if err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar professor"})
 			return
 		}
@@ -100,29 +109,34 @@ func NotaRoutes(r *gin.Engine) {
 		// Verificar se a atividade existe e obter o valor total
 		var valorTotal float64
 		var turmaID int
-		err = config.DB.QueryRow("SELECT valor, turma_id FROM atividades WHERE id = $1", nota.AtividadeID).Scan(&valorTotal, &turmaID)
+		err = tx.QueryRow("SELECT valor, turma_id FROM atividades WHERE id = $1", nota.AtividadeID).Scan(&valorTotal, &turmaID)
 		if err == sql.ErrNoRows {
+			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Atividade inválida"})
 			return
 		} else if err != nil {
+			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar atividade"})
 			return
 		}
 
 		// Verificar se o aluno já possui uma nota para essa atividade
 		var notaExistenteID int
-		err = config.DB.QueryRow("SELECT id FROM notas WHERE aluno_id = $1 AND atividade_id = $2", nota.AlunoID, nota.AtividadeID).Scan(&notaExistenteID)
+		err = tx.QueryRow("SELECT id FROM notas WHERE aluno_id = $1 AND atividade_id = $2", nota.AlunoID, nota.AtividadeID).Scan(&notaExistenteID)
 		if err != nil && err != sql.ErrNoRows {
+			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao verificar nota existente"})
 			return
 		}
 		if notaExistenteID > 0 {
+			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "O aluno já possui uma nota para essa atividade"})
 			return
 		}
 
 		// Verificar se o valor obtido não excede o valor total da atividade
 		if nota.ValorObtido > *&valorTotal {
+			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "O valor obtido não pode exceder o valor total da atividade"})
 			return
 		}
@@ -130,9 +144,17 @@ func NotaRoutes(r *gin.Engine) {
 		// Inserir nota no banco de dados
 		query := `INSERT INTO notas (aluno_id, atividade_id, professor_id, valor_obtido) VALUES ($1, $2, $3, $4) RETURNING id`
 		var id int
-		err = config.DB.QueryRow(query, nota.AlunoID, nota.AtividadeID, nota.ProfessorID, nota.ValorObtido).Scan(&id)
+		err = tx.QueryRow(query, nota.AlunoID, nota.AtividadeID, nota.ProfessorID, nota.ValorObtido).Scan(&id)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao inserir nota: " + err.Error()})
+			return
+		}
+
+		// Commit da transação
+		err = tx.Commit()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao finalizar transação: " + err.Error()})
 			return
 		}
 
