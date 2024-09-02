@@ -24,6 +24,7 @@ func NotaRoutes(r *gin.Engine) {
 				n.valor_obtido 
 			FROM notas n 
 			JOIN atividades a ON n.atividade_id = a.id
+			ORDER BY a.turma_id
 		`)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
